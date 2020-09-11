@@ -1,0 +1,275 @@
+{
+    "doc_url": "https://raw.githubusercontent.com/jldevelops/aa-len/master/description.json",
+    init: `{
+        $oswap_fact = 'B22543LKSS35Z55ROU4GDN26RT6MDKWU';
+        $loan_fee = 1.01;
+        $chechAddr = $addr =>{
+            if(!is_valid_address($addr))
+                bounce('not valid '||$addr);
+            if(!var[$oswap_fact]['pools.'||$addr||'.asset'])
+                bounce('not oswap pool');
+        };
+        $chechAddresses = $addr =>{
+            if(!is_array($addr))
+                bounce('addresses invalid');
+            if(array_length($addr)<2 OR array_length($addr)>4)
+                bounce('min 2 max 4 addresses');
+            foreach($addr,4,$ad => $chechAddr($ad));
+        };
+        $getPool = $ass => var[$ass];
+        if(trigger.output[[asset!=base]].asset != 'none'){
+            $asset = trigger.output[[asset!=base]].asset;
+            if($asset and $asset == 'ambiguous') 
+                bounce('Only 1 asset per tx');
+        }
+        else
+            $asset = 'base';
+        $to = is_valid_address(trigger.data.to)?trigger.data.to:trigger.address;
+        
+    }`,
+    "messages": {
+        "cases": [
+            {
+                if: `{var['addresses']}`,
+                init: `{
+                    $end = var['index'] == var['last_index'];
+                    if($end){
+                        $pool = var['pool'];
+                        if($pool.asset != $asset)
+                            bounce('failed, not same asset returned');
+                        $diff = trigger.output[[asset=$asset]]-round(var['amount']*$loan_fee);
+                        if($diff <= 0)
+                            bounce('failed, not enough funds');
+                    }
+                    else
+                        $addrs = var['addresses'];
+                }`,
+                "messages": [
+                    {
+                        if: `{!$end}`,
+                        "app": "payment",
+                        "payload": {
+                            "asset": "{$asset}",
+                            "outputs": [
+                                {
+                                    "address": "{$addrs[var['index']]}",
+                                    "amount": `{trigger.output[[asset=$asset]]}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        if: `{!$end}`,
+                        "app": "data",
+                        "payload": {
+                            "to": `{this_address}`
+                        }
+                    },
+                    {
+                        if: `{$end}`,
+                        "app": "payment",
+                        "payload": {
+                            "asset": "{$asset}",
+                            "outputs": [
+                                {
+                                    "address": "{var['to']}",
+                                    "amount": `{$diff}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        app: 'state',
+                        state: `{
+                            if($end){
+                                var[$pool.asset] = $pool;
+                                var['pool'] = false;
+                                var['amount'] = false;
+                                var['addresses'] = false;
+                                var['index'] = false;
+                                var['to'] = false;
+                                var['last_index'] = false;
+                            }
+                            else{
+                                var['index'] += 1;
+                            }
+                            
+                        }`  
+                    }
+                ]
+            },
+                {
+                    if:`{
+                        trigger.data.lend
+                    }`,
+                    "init": "{
+                        if($asset != 'base')
+                            bounce('no assets here');
+                        if(trigger.data.pool){
+                             if(!asset[trigger.data.pool].exists)
+                                bounce('pool asset invalid');
+                             if(!$getPool(trigger.data.pool))
+                                bounce('pool for asset needs to be created first');
+                            $pool = $getPool(trigger.data.pool);
+                        }
+                        else{
+                            $pool = $getPool('base');
+                        }
+                       $am = trigger.data.amount+0 < balance[$pool.asset]-($pool.asset=='base'?10000:0)?trigger.data.amount:balance[$pool.asset]-($pool.asset=='base'?10000:0);
+                       if($am < 100)
+                            bounce('min loan 100');
+                       $addresses = trigger.data.addresses;
+                       $shallnopass = $chechAddresses($addresses);
+
+                    }",
+                    "messages": [
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": `{$pool.asset}`,
+                            "outputs": [
+                                {
+                                    "address": "{$addresses[0]}",
+                                    "amount": `{$am}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "app": "data",
+                        "payload": {
+                            "to": `{this_address}`
+                        }
+                    },
+                        {
+                            "app": "state",
+                            "state": "{
+                                var['addresses'] = $addresses;
+                                var['index'] = 1;
+                                var['last_index'] = array_length($addresses);
+                                var['pool'] = $pool;
+                                var['amount'] = $am;
+                                var['to'] = is_valid_address(trigger.data.to)?trigger.data.to:trigger.initial_address;
+                                response['event'] = 'loan';
+                            }"
+                        }
+                    ]
+                },
+                {
+                if: `{trigger.data.withdraw}`,
+                init: `{
+                    if($asset == 'base')
+                        bounce('asset not found');
+                    $ass = var['as_'||$asset];
+                    if(!$ass OR !asset[$ass].exists)
+                        bounce('invalid ass');
+                    $pool = $getPool($ass);
+                    $inp = trigger.output[[asset=$asset]];
+                    $pct = $inp/$pool.tokens;
+                    $am = round($pct*balance[$pool.asset]);
+                    if($am == 0)
+                        bounce('whatever');
+                    
+                }`,
+                "messages": [
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": `{$pool.asset}`,
+                            "outputs": [
+                                {
+                                    "address": "{$to}",
+                                    "amount": `{$am}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "app": "state",
+                        "state": "{
+                            $pool.tokens = $pool.tokens - $inp;
+                            var[$ass] = $pool;
+                            response['event'] = 'withdraw';
+                        }"
+                    }
+                ]
+            },
+                {
+                if: `{trigger.data.create and !$getPool($asset)}`,
+                "messages": [
+                    {
+                        "app": "asset",
+                        payload: {
+                            is_private: false,
+							is_transferrable: true,
+							auto_destroy: true,
+                            fixed_denominations: false,
+							issued_by_definer_only: true,
+							cosigned_by_definer: false,
+							spender_attested: false
+						}
+                    },
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": `{$asset}`,
+                            "outputs": [
+                                {
+                                    "address": "{trigger.address}",
+                                    "amount": `{trigger.output[[asset=$asset]]}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "app": "state",
+                        "state": "{
+                            $data = {};
+                            $data.token = response_unit;
+                            $data.asset = $asset;
+                            $data.tokens = 0;
+                            var[$asset] = $data;
+                            var['as_'||response_unit] = $asset;
+                            response['event'] = 'create';
+                        }"
+                    }
+                ]
+            },
+            {
+                init: `{
+                    if($asset == 'base'){
+                        if (!trigger.data.pool)
+                            bounce('pool missing');
+                        if(trigger.data.pool != 'base' AND !asset[trigger.data.pool].exists)
+                            bounce('invalid pool');
+                    }
+                    $data = $getPool($asset);
+                    if(!$data)
+                        bounce('please create pool first');
+                }`,
+                "messages": [
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": `{$data.token}`,
+                            "outputs": [
+                                {
+                                    "address": "{$to}",
+                                    "amount": `{trigger.output[[asset=$asset]]}`
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "app": "state",
+                        "state": "{
+                            $data.tokens = $data.tokens + trigger.output[[asset=$asset]];
+                            var[$asset] = $data;
+                            response['event'] = 'fill';
+                        }"
+                    }
+                ]
+            }
+        ]
+    }
+}

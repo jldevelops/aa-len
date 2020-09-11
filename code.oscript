@@ -18,6 +18,8 @@
             true
         };
         $getPool = $ass => {
+            if(!$ass)
+                bounce('asset param not found');
             if($ass != 'base' AND !asset[$ass].exists)
                 bounce('asset invalid');
             $data = {};

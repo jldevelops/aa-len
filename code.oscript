@@ -224,18 +224,15 @@
                     "init": "{
                         if($asset != 'base')
                             bounce('no assets here');
-                        if(trigger.data.pool){
-                             if(!asset[trigger.data.pool].exists)
+                        if(trigger.data.asset){
+                             if(!asset[trigger.data.asset].exists)
                                 bounce('pool asset invalid');
-                            $pool = $getPool(trigger.data.pool);
+                            $pool = $getPool(trigger.data.asset);
                         }
                         else{
                             $pool = $getPool('base');
                         }
-                        if(trigger.data.amount)
-                            $am = trigger.data.amount+0 < balance[$pool.asset]-($pool.asset=='base'?10000:0)?trigger.data.amount:balance[$pool.asset]-($pool.asset=='base'?10000:0);
-                        else
-                            $am = balance[$pool.asset]-($pool.asset=='base'?10000:0);
+                        $am = trigger.data.amount AND trigger.data.amount+0 < balance[$pool.asset]?trigger.data.amount:balance[$pool.asset];
                        if($am < 100)
                             bounce('min loan 100');
                        $addresses = trigger.data.addresses;

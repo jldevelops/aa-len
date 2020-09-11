@@ -3,14 +3,14 @@
     init: `{
         $oswap_fact = 'B22543LKSS35Z55ROU4GDN26RT6MDKWU';
         $loan_fee = 1.01;
-        $month = 60*60*24*32;
+        $month = 60*60*24*31;
         $today = split(timestamp_to_string(timestamp,'date'),'-');
         $day_one = $today[2] == '01';
         $chechAddr = $addr =>{
             if(!is_valid_address($addr))
                 bounce('not valid '||$addr);
             if(!var[$oswap_fact]['pools.'||$addr||'.asset'])
-                bounce('not oswap pool');
+                bounce('not oswap pool'||$addr);
         };
         $chechAddresses = $addr =>{
             if(!is_array($addr))
@@ -92,7 +92,6 @@
                         app: 'state',
                         state: `{
                             if($end){
-                                var[$asset] = $pool;
                                 var['pool'] = false;
                                 var['amount'] = false;
                                 var['addresses'] = false;
@@ -114,7 +113,7 @@
                 if: `{trigger.data.interest and $day_one}`,
                 init: `{
                     if(var[trigger.address||'_t'||$asset]+$month > timestamp)
-                        bounce('32 days min since last deposit to accrue interest');
+                        bounce('31 days min since last deposit to accrue interest');
                     $ass = trigger.data.asset;
                     if($ass != 'base' AND !asset[$ass].exists)
                         bounce('asset invalid');
@@ -122,15 +121,13 @@
                     $inp = var[trigger.address||'_'||$pool.asset];
                     $pct = $inp /(($pool.t_lm_upd+(60*60*48) < timestamp)?$pool.t_lm:$pool.t_llm);
                     $tot = round(balance[$pool.asset]*$pct)-var[trigger.address||'_'||$pool.asset];
-                    $act = trigger.data.action;
-                    if($act AND $act != 'w')
-                        bounce('invalid action');
+                    $act = trigger.data.withdraw == 1;
                     if(var[trigger.address||'i_'||$pool.asset] AND var[trigger.address||'i_'||$pool.asset]+(60*60*48)>timestamp)
                         bounce('already triggered');
                 }`,
                 "messages": [
                     {
-                        if:`{$act == 'w'}`,
+                        if:`{$act}`,
                         "app": "payment",
                         "payload": {
                             "asset": `{$pool.asset}`,

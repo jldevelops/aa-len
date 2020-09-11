@@ -236,7 +236,10 @@
                         $pool = $getPool(trigger.data.asset);
                     else
                         $pool = $getPool('base');
-                    $am = trigger.data.amount AND trigger.data.amount+0 < $getPoolAmount($pool.asset)?trigger.data.amount:$getPoolAmount($pool.asset);
+                    if(trigger.data.amount)
+                        $am = trigger.data.amount < $getPoolAmount($pool.asset)?trigger.data.amount:$getPoolAmount($pool.asset);
+                    else
+                        $am = $getPoolAmount($pool.asset);
                     if($am < 100)
                         bounce('min loan 100');
                     $addresses = trigger.data.addresses;

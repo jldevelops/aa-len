@@ -28,7 +28,7 @@
             $data.tokens = 0;//actual amount of tokens
             $data.t_lm = 0;//last month amount of tokens
             $data.t_lm_upd = 0;
-            var[$ass] OTHERWISE $data
+            json_parse(var[$ass]) OTHERWISE $data
         };
         $getPoolAmount = $ass => balance[$ass]-($ass == 'base'?storage_size:0);
         $getDeposit= $addr,$pool =>var[$addr||'_'||$pool];
@@ -58,7 +58,7 @@
                 init: `{
                     $end = var['index'] == var['last_index'];
                     if($end){
-                        $pool = var['pool'];
+                        $pool = json_parse(var['pool']);
                         if($pool.asset != $asset)
                             bounce('failed, not same asset returned');
                         $diff = trigger.output[[asset=$asset]]-round(var['amount']*$loan_fee);
@@ -66,7 +66,7 @@
                             bounce('failed, not enough funds');
                     }
                     else
-                        $addrs = var['addresses'];
+                        $addrs = json_parse(var['addresses']);
                 }`,
                 "messages": [
                     {

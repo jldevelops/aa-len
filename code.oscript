@@ -9,8 +9,7 @@
                 bounce('not oswap pool'||$addr);
             true
         };
-        $chechAddresses = $add =>{
-            $addr = json_parse($add);
+        $chechAddresses = $addr =>{
             if(!is_array($addr))
                 bounce('addresses invalid');
             if(array_length($addr)<2 OR array_length($addr)>4)
@@ -28,10 +27,9 @@
             $data.tokens = 0;//actual amount of tokens
             $data.t_lm = 0;//last month amount of tokens
             $data.t_lm_upd = 0;
-            json_parse(var[$ass]) OTHERWISE $data
+            var[$ass] OTHERWISE $data
         };
         $getPoolAmount = $ass => balance[$ass]-($ass == 'base'?storage_size:0);
-        $getDeposit= $addr,$pool =>var[$addr||'_'||$pool];
         $getInterestAmount= $inp,$pool =>{
             $pct = $inp /(($pool.t_lm_upd+(60*60*48) < timestamp)?$pool.t_lm:$pool.t_llm);
             round($getPoolAmount($pool.asset)*$pct)-$inp
@@ -58,7 +56,7 @@
                 init: `{
                     $end = var['index'] == var['last_index'];
                     if($end){
-                        $pool = json_parse(var['pool']);
+                        $pool = var['pool'];
                         if($pool.asset != $asset)
                             bounce('failed, not same asset returned');
                         $diff = trigger.output[[asset=$asset]]-round(var['amount']*$loan_fee);
@@ -66,7 +64,7 @@
                             bounce('failed, not enough funds');
                     }
                     else
-                        $addrs = json_parse(var['addresses']);
+                        $addrs = var['addresses'];
                 }`,
                 "messages": [
                     {
@@ -131,7 +129,7 @@
                         bounce('31 days min since last deposit to accrue interest');
                     if(var[trigger.address||'i_'||$pool.asset] AND var[trigger.address||'i_'||$pool.asset]+(60*60*48)>timestamp)
                         bounce('already triggered');
-                    $tot = $getInterestAmount($getDeposit(trigger.address,$pool.asset),$pool);
+                    $tot = $getInterestAmount(var[trigger.address||'_'||$pool.asset],$pool);
                     $act = trigger.data.withdraw == 1;
                 }`,
                 "messages": [
@@ -178,7 +176,7 @@
                 if: `{trigger.data.withdraw}`,
                 init: `{
                     $pool = $getPool(trigger.data.asset);
-                    $inp = $getDeposit(trigger.address,$pool.asset);
+                    $inp = var[trigger.address||'_'||$pool.asset];
                     if(trigger.data.amount)
                         $am = trigger.data.amount < $inp?trigger.data.amount:$inp;
                     else
@@ -192,7 +190,7 @@
                             "outputs": [
                                 {
                                     "address": "{$to}",
-                                    "amount": `{$am}`
+                                    "amount": `{$inp}`
                                 }
                             ]
                         }
@@ -242,7 +240,7 @@
                         $am = $getPoolAmount($pool.asset);
                     if($am < 100)
                         bounce('min loan 100');
-                    $addresses = trigger.data.addresses;
+                    $addresses = json_parse(trigger.data.addresses);
                     $shallnopass = $chechAddresses($addresses);
 
                 }",

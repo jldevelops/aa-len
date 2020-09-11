@@ -176,7 +176,10 @@
                 init: `{
                     $pool = $getPool(trigger.data.asset);
                     $inp = $getDeposit(trigger.address,$pool.asset);
-                    $am = trigger.data.amount AND trigger.data.amount+0 < $inp?trigger.data.amount:$inp;
+                    if(trigger.data.amount)
+                        $am = trigger.data.amount < $inp?trigger.data.amount:$inp;
+                    else
+                        $am = $inp;
                 }`,
                 "messages": [
                     {

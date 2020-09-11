@@ -1,0 +1,15 @@
+{
+	"version": "1.0",
+	"description": "AA-LEN. Flash loans for oswap protocol.",
+	"homepage_url": "https://github.com/jldevelops/aa-len",
+	"source_url": "https://github.com/jldevelops/aa-len",
+	"field_descriptions": {
+    "interest": "Command to accrue interest day 1 of each month. Set the value to 1.",
+		"withdraw": "Command to withdraw funds/withdraw interest. Set the value to 1.",
+		"deposit": "Command to deposit funds. Set the value to 1.",
+		"asset": "ID of asset (44 characters or base).",
+    "addresses": "oswap pool addresses array to send funds, min 2 max 4",
+    "to": "Optional, address to send instead of trigger address",
+		"amount": "Optional, amount to send to first pool. Default send all available."
+	}
+}

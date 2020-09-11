@@ -1,7 +1,7 @@
 {
     "doc_url": "https://raw.githubusercontent.com/jldevelops/aa-len/master/description.json",
     getters: `{
-        $OSWAP_FACT = 'B22543LKSS35Z55ROU4GDN26RT6MDKWU';
+        $OSWAP_FACT = 'PFNAFDKV6HKKFIEB2R2ZE4IAPSDNNIGX';
         $chechAddr = $addr =>{
             if(!is_valid_address($addr))
                 bounce('not valid '||$addr);
@@ -9,7 +9,8 @@
                 bounce('not oswap pool'||$addr);
             true
         };
-        $chechAddresses = $addr =>{
+        $chechAddresses = $add =>{
+            $addr = json_parse($add);
             if(!is_array($addr))
                 bounce('addresses invalid');
             if(array_length($addr)<2 OR array_length($addr)>4)

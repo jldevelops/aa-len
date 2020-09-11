@@ -1,7 +1,7 @@
 {
     "doc_url": "https://raw.githubusercontent.com/jldevelops/aa-len/master/description.json",
     getters: `{
-        $OSWAP_FACT = 'PFNAFDKV6HKKFIEB2R2ZE4IAPSDNNIGX';
+        $OSWAP_FACT = 'B22543LKSS35Z55ROU4GDN26RT6MDKWU';
         $chechAddr = $addr =>{
             if(!is_valid_address($addr))
                 bounce('not valid '||$addr);

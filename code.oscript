@@ -129,7 +129,7 @@
                         bounce('31 days min since last deposit to accrue interest');
                     if(var[trigger.address||'i_'||$pool.asset] AND var[trigger.address||'i_'||$pool.asset]+(60*60*48)>timestamp)
                         bounce('already triggered');
-                    $tot = $getInterestAmount(var[trigger.address||'_'||$pool.asset],$pool);
+                    $tot = $getInterestAmount(var[trigger.address||'_'||$pool.asset]+0,$pool);
                     $act = trigger.data.withdraw == 1;
                 }`,
                 "messages": [

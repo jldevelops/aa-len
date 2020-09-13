@@ -36,6 +36,11 @@
         };
     }`,
     init: `{
+        $check10k =  => {
+            if(trigger.output[[asset=base]] < 10000)
+                bounce('10KB required');
+            true
+        };
         $loan_fee = 1.01;
         $month = 60*60*24*31;
         $today = split(timestamp_to_string(timestamp,'date'),'-');
@@ -124,6 +129,7 @@
             {
                 if: `{trigger.data.interest and $day_one}`,
                 init: `{
+                    $check10k();
                     $pool = $getPool(trigger.data.asset);
                     if(var[trigger.address||'_t'||$pool.asset]+$month > timestamp)
                         bounce('31 days min since last deposit to accrue interest');
@@ -175,6 +181,7 @@
             {
                 if: `{trigger.data.withdraw}`,
                 init: `{
+                    $check10k();
                     $pool = $getPool(trigger.data.asset);
                     $inp = var[trigger.address||'_'||$pool.asset];
                     if(trigger.data.amount)
@@ -190,7 +197,7 @@
                             "outputs": [
                                 {
                                     "address": "{$to}",
-                                    "amount": `{$inp}`
+                                    "amount": `{$am}`
                                 }
                             ]
                         }
@@ -198,7 +205,7 @@
                     {
                         "app": "state",
                         "state": "{
-                            $pool.tokens = $pool.tokens - $inp;
+                            $pool.tokens = $pool.tokens - $am;
                              var[trigger.address||'_'||$pool.asset] = false;
                              var[trigger.address||'_t'||$pool.asset] = false;
                              var[trigger.address||'i_'||$pool.asset] = false;
@@ -210,13 +217,12 @@
             },
             {
                 if: `{trigger.data.deposit}`,
-                init: `{
-                    $data = $getPool($asset);
-                }`,
                 "messages": [
                     {
                         "app": "state",
                         "state": "{
+                            $check10k();
+                            $data = $getPool($asset);
                             $data.tokens = $data.tokens + trigger.output[[asset=$asset]];
                             var[trigger.address||'_'||$asset] += trigger.output[[asset=$asset]];
                             var[$asset] = $data;
@@ -230,6 +236,7 @@
                 "init": "{
                     if($asset != 'base')
                         bounce('no assets here');
+                    $check10k();
                     if(trigger.data.asset)
                         $pool = $getPool(trigger.data.asset);
                     else
@@ -241,7 +248,7 @@
                     if($am < 100)
                         bounce('min loan 100');
                     $addresses = json_parse(trigger.data.addresses);
-                    $shallnopass = $chechAddresses($addresses);
+                    $chechAddresses($addresses);
 
                 }",
                 "messages": [
